@@ -1,0 +1,850 @@
+CREATE EXTENSION pg_estimator;
+SELECT es_get_size_aligned(23, 4);
+ es_get_size_aligned 
+---------------------
+                  24
+(1 row)
+
+SELECT * from es_constants();
+ blocksize | heaptupleheaderdata | maxalign | pageheaderdata | itemiddata | itempointerdata 
+-----------+---------------------+----------+----------------+------------+-----------------
+      8192 |                  23 |        8 |             24 |          4 |               6
+(1 row)
+
+-- LARGE NUMBER OF COLS
+CREATE TABLE foo(i0 int, i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int,
+                 i8 int, i9 int, i10 int, i11 int, i12 int, i13 int, i14 int,
+		 i15 int, i16 int, i17 int, i18 int, i19 int, i20 int, i21 int,
+		 i22 int, i23 int, i24 int, i25 int, i26 int, i27 int, i28 int,
+		 i29 int, i30 int, i31 int, i32 int, i33 int, i34 int, i35 int,
+		 i36 int, i37 int, i38 int, i39 int, i40 int, i41 int, i42 int,
+		 i43 int, i44 int, i45 int, i46 int, i47 int, i48 int, i49 int,
+		 i50 int, i51 int, i52 int, i53 int, i54 int, i55 int, i56 int,
+		 i57 int, i58 int, i59 int, i60 int, i61 int, i62 int, i63 int,
+		 i64 int);
+INSERT INTO foo select n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,
+n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n 
+from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+              288
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 289 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 293 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3915776 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 1 %
+(1 row)
+
+DROP TABLE foo;
+-- INT + NULLs
+CREATE TABLE foo(id1 int);
+INSERT INTO foo select n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               28
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 35 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 38 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 10 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(id1 int,id2 int);
+INSERT INTO foo select n,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               32
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 35 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 38 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 10 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
+INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               40
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 42 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 46 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 8 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
+INSERT INTO foo select null,n,n,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               36
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 42 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 46 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 8 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
+INSERT INTO foo select n,null,n,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               36
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 42 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 46 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 8 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
+INSERT INTO foo select n,n,null,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               36
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 42 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 46 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 8 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
+INSERT INTO foo select n,n,n,null from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               36
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 42 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 46 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 8 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
+INSERT INTO foo select null,n,null,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               32
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 35 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 38 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 10 %
+(1 row)
+
+DROP TABLE foo;
+-- TEXT + INT + NULLs
+CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
+INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               48
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 54 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3981312 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 7 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
+INSERT INTO foo select n,n,null,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+               40
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 42 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 46 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3973120 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 8 %
+(1 row)
+
+DROP TABLE foo;
+-- COMPRESSED DATA
+CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
+INSERT INTO foo select repeat('1234567890',(2^9)::integer),n,n,n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+              120
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+                 0
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 120 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 124 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3956736 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 3 %
+(1 row)
+
+DROP TABLE foo;
+-- TOAST DATA
+CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
+INSERT INTO foo select repeat('1234567890',(2^16)::integer),n,n,n from generate_series(1,10000) as g(n);
+SELECT es_get_datawidth('public', 'foo');
+ es_get_datawidth 
+------------------
+              125
+(1 row)
+
+SELECT es_get_toastwidth('public', 'foo');
+ es_get_toastwidth 
+-------------------
+              7664
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 80 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 10000));
+ pg_size_pretty 
+----------------
+ 79 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 10000));
+ pg_size_pretty 
+----------------
+ 312 kB
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 10000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ -1 %
+(1 row)
+
+DROP TABLE foo;
+-- INDEXES TODO
+CREATE TABLE foo(t1 text UNIQUE, i1 int, t2 text, i2 int, t3 text, i3 int);
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "foo_t1_key" for table "foo"
+INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
+REINDEX TABLE foo;
+SELECT pg_size_pretty( pg_indexes_size('foo'));
+ pg_size_pretty 
+----------------
+ 21 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 21 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_table_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
+        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+ pg_size_pretty 
+----------------
+ 54 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 71 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 75 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3817472 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 5 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(t1 text, i1 int UNIQUE, t2 text, i2 int, t3 text, i3 int);
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "foo_i1_key" for table "foo"
+INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
+REINDEX TABLE foo;
+SELECT pg_size_pretty( pg_indexes_size('foo'));
+ pg_size_pretty 
+----------------
+ 21 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 21 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_table_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
+        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+ pg_size_pretty 
+----------------
+ 54 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 71 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 75 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ -3817472 bytes
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ 5 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int, t3 text, i3 int, UNIQUE (t1,i3));
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "foo_t1_i3_key" for table "foo"
+INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
+REINDEX TABLE foo;
+SELECT pg_size_pretty( pg_indexes_size('foo'));
+ pg_size_pretty 
+----------------
+ 30 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 21 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_table_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
+        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+ pg_size_pretty 
+----------------
+ 54 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 80 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 75 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 5136 kB
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ -7 %
+(1 row)
+
+DROP TABLE foo;
+CREATE TABLE foo(t1 text UNIQUE, i1 int, t2 text, i2 int, t3 text, i3 int, UNIQUE (i1,i3));
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "foo_t1_key" for table "foo"
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "foo_i1_i3_key" for table "foo"
+INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
+REINDEX TABLE foo;
+SELECT pg_size_pretty( pg_indexes_size('foo'));
+ pg_size_pretty 
+----------------
+ 52 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 43 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_table_size('foo'));
+ pg_size_pretty 
+----------------
+ 50 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
+        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+ pg_size_pretty 
+----------------
+ 54 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo'));
+ pg_size_pretty 
+----------------
+ 101 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 96 MB
+(1 row)
+
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
+ pg_size_pretty 
+----------------
+ 5296 kB
+(1 row)
+
+SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+       / pg_total_relation_size('foo') - 100) || ' %';
+ ?column? 
+----------
+ -6 %
+(1 row)
+
+DROP TABLE foo;
+-- HELPER
+-- 
+CREATE TABLE t AS SELECT repeat('1234567890',(2^n)::integer) FROM generate_series(0,20) n;
+SELECT length(repeat), octet_length(repeat), pg_column_size(repeat) FROM t;
+  length  | octet_length | pg_column_size 
+----------+--------------+----------------
+       10 |           10 |             11
+       20 |           20 |             21
+       40 |           40 |             41
+       80 |           80 |             81
+      160 |          160 |            164
+      320 |          320 |            324
+      640 |          640 |            644
+     1280 |         1280 |           1284
+     2560 |         2560 |             51
+     5120 |         5120 |             79
+    10240 |        10240 |            138
+    20480 |        20480 |            254
+    40960 |        40960 |            488
+    81920 |        81920 |            959
+   163840 |       163840 |           1898
+   327680 |       327680 |           3769
+   655360 |       655360 |           7519
+  1310720 |      1310720 |          15022
+  2621440 |      2621440 |          30025
+  5242880 |      5242880 |          60031
+ 10485760 |     10485760 |         120047
+(21 rows)
+
+DROP TABLE t;
+DROP EXTENSION pg_estimator;

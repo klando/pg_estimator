@@ -1,0 +1,12 @@
+DROP FUNCTION es_get_size_aligned(bigint, bigint);
+DROP FUNCTION es_constants();
+DROP FUNCTION es_get_fillfactor(p_schemaname text, p_relname text);
+DROP FUNCTION es_get_datawidth(p_schemaname text, p_relname text);
+DROP FUNCTION es_get_toastwidth(p_schemaname text, p_relname text);
+DROP FUNCTION es_get_coldatawidth(p_schemaname text, p_relname text, p_attname text);
+DROP FUNCTION es_get_indexwidth(p_schemaname text, p_relname text, p_irelname text);
+DROP FUNCTION pg_estimate_heap_size(p_schemaname text, p_relname text, p_tuples bigint);
+DROP FUNCTION pg_estimate_toast_size(p_schemaname text, p_relname text, p_tuples bigint);
+DROP FUNCTION pg_estimate_index_size(p_schemaname text, p_relname text, p_irelname text, p_tuples bigint);
+DROP FUNCTION pg_estimate_indexes_size(p_schemaname text, p_relname text, p_tuples bigint);
+DROP FUNCTION pg_estimate_total_relation_size(p_schemaname text, p_relname text, p_tuples bigint);
