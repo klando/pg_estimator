@@ -3,6 +3,50 @@ CREATE EXTENSION pg_estimator;
 SELECT es_get_size_aligned(23, 4);
 SELECT * from es_constants();
 
+-- Multiple Schema
+CREATE SCHEMA test;
+CREATE TABLE test.foo(id1 int PRIMARY KEY);
+INSERT INTO test.foo select n from generate_series(1,100) as g(n);
+SELECT es_get_datawidth('test', 'foo');
+SELECT es_get_toastwidth('test', 'foo');
+SELECT pg_size_pretty( pg_total_relation_size('test.foo'));
+SELECT pg_size_pretty( pg_estimate_total_relation_size('test', 'foo', 100));
+SELECT pg_size_pretty( pg_total_relation_size('test.foo') - pg_estimate_total_relation_size('test', 'foo', 100));
+SELECT ((pg_estimate_total_relation_size('test', 'foo', 100) * 100)
+       / pg_total_relation_size('test.foo') - 100) || ' %';
+DROP TABLE test.foo;
+DROP SCHEMA test;
+
+-- Multiple Schema (change search_path)
+CREATE SCHEMA test;
+SET search_path TO test,public;
+CREATE TABLE test.foo(id1 int PRIMARY KEY);
+INSERT INTO test.foo select n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('test', 'foo');
+SELECT es_get_toastwidth('test', 'foo');
+SELECT pg_size_pretty( pg_total_relation_size('test.foo'));
+SELECT pg_size_pretty( pg_estimate_total_relation_size('test', 'foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('test.foo') - pg_estimate_total_relation_size('test', 'foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('test', 'foo', 1000000) * 100)
+       / pg_total_relation_size('test.foo') - 100) || ' %';
+DROP TABLE test.foo;
+DROP SCHEMA test;
+
+-- Multiple Schema (change search_path 2)
+CREATE SCHEMA test;
+SET search_path TO public,test;
+CREATE TABLE test.foo(id1 int PRIMARY KEY);
+INSERT INTO test.foo select n from generate_series(1,1000000) as g(n);
+SELECT public.es_get_datawidth('test', 'foo');
+SELECT public.es_get_toastwidth('test', 'foo');
+SELECT pg_size_pretty( pg_total_relation_size('test.foo'));
+SELECT pg_size_pretty( public.pg_estimate_total_relation_size('test', 'foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('test.foo') - public.pg_estimate_total_relation_size('test', 'foo', 1000000));
+SELECT ((public.pg_estimate_total_relation_size('test', 'foo', 1000000) * 100)
+       / pg_total_relation_size('test.foo') - 100) || ' %';
+DROP TABLE test.foo;
+DROP SCHEMA test;
+
 -- LARGE NUMBER OF COLS
 CREATE TABLE foo(i0 int, i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int,
                  i8 int, i9 int, i10 int, i11 int, i12 int, i13 int, i14 int,
