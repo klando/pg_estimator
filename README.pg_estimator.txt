@@ -23,32 +23,38 @@ data. Distribution of data (including NULL) is important and will be respected.
 The estimation is done for fully packed pages and can be wrong up to 10% in some
 cases.
 
-* FUNCTION pg_estimate_heap_size(p_schemaname text, p_relname text, p_tuples bigint)
+* FUNCTION pg_estimate_heap_size(p_relation regclass, p_tuples bigint)
   Returns the estimate size for the HEAP files.
-* FUNCTION pg_estimate_toast_size(p_schemaname text, p_relname text, p_tuples bigint)
+* FUNCTION pg_estimate_toast_size(p_relation regclass, p_tuples bigint)
   Returns the estimate size for the TOAST files.
-* FUNCTION pg_estimate_index_size(p_schemaname text, p_relname text, p_irelname text, p_tuples bigint)
+* FUNCTION pg_estimate_index_size(p_irelation regclass, p_tuples bigint)
   Returns the estimate size for the INDEX files.
-* FUNCTION pg_estimate_indexes_size(p_schemaname text, p_relname text, p_tuples bigint)
+* FUNCTION pg_estimate_indexes_size(p_relation regclass, p_tuples bigint)
   Returns the estimate size for all the INDEX files of a table.
-* FUNCTION pg_estimate_total_relation_size(p_schemaname text, p_relname text, p_tuples bigint)
+* FUNCTION pg_estimate_total_relation_size(p_relation regclass, p_tuples bigint)
   Returns the estimate size for all the files of a table (including all of the above).
 
 Parameters :
-* p_schemaname : schema name
-* p_relname table name
-* p_irelname index name
+* p_relation : the regclass for the table
+* p_irelation : the regclass for the index
 * p_tuples number of tuples used for estimation
 
 Results : All results are in _bytes_.
 
 == Example
 
-A pretty simple example :
+Pretty simple examples :
 
 [src,sql]
 ----
-SELECT pg_size_pretty(pg_estimate_total_relation_size('public', 'table_test'));
+-- schema qualified if required
+SELECT pg_size_pretty(pg_estimate_total_relation_size('test.table_test'));
+-- name protected if required
+SELECT pg_size_pretty(pg_estimate_total_relation_size('"public.Table Test'));
+-- possible to call with OID of the relation (nice to JOIN with pg_class)
+SELECT pg_size_pretty(pg_estimate_total_relation_size(oid))
+FROM pg_class
+WHERE relname = 'Table Test';
 ----
 == Limitation
 

@@ -4,7 +4,6 @@
 -- TODO use real FILLFACTOR for TOASTed tables
 -- TODO account VM ?
 -- TODO account FSM ?
--- TODO use oid ?
 -- XXX estimate of index does not really account nullbitmap (pg_columns already rounded its results including null_frac)
 
 --
@@ -42,7 +41,7 @@ $$;
 --
 -- Function to get the fillfactor of a relation
 CREATE OR REPLACE
-FUNCTION es_get_fillfactor(p_schemaname text, p_relname text)
+FUNCTION es_get_fillfactor(p_relation regclass)
 RETURNS INT
 LANGUAGE SQL STABLE
 AS $$
@@ -51,23 +50,34 @@ SELECT
     regexp_replace(
       reloptions::text, E'.*fillfactor=(\\d+).*', E'\\1'),
     CASE WHEN relkind = 'i' THEN '90' ELSE '100' END)::int
-  FROM pg_class cr
-  JOIN pg_namespace nr ON (nr.oid = cr.relnamespace)
- WHERE cr.relname = p_relname AND nr.nspname = p_schemaname;
+  FROM pg_class
+ WHERE oid = p_relation;
+$$;
+
+--
+-- Function to get the relname of a relation
+CREATE OR REPLACE
+FUNCTION es_get_relname(p_relation regclass)
+RETURNS name
+LANGUAGE SQL STABLE
+AS $$
+SELECT relname
+  FROM pg_class
+ WHERE oid = p_relation;
 $$;
 
 --
 -- Function to get the avg data width of a row
 CREATE OR REPLACE
-FUNCTION es_get_datawidth(p_schemaname text, p_relname text)
+FUNCTION es_get_datawidth(p_relation regclass)
 RETURNS BIGINT
 LANGUAGE PLPGSQL STABLE
 AS $$
 DECLARE
   v_datawidth bigint;
 BEGIN
-EXECUTE 'select avg(pg_column_size(' || quote_ident(p_relname) || '))::bigint from '
-	|| quote_ident(p_schemaname) || '.' || quote_ident(p_relname)
+EXECUTE 'select avg(pg_column_size(' || quote_ident(es_get_relname(p_relation)) || '))::bigint from '
+	|| p_relation
 INTO STRICT v_datawidth;
 RETURN v_datawidth;
 END;
@@ -76,30 +86,27 @@ $$;
 --
 -- Function to get the avg number of tuples in TOAST for 1 tuple in HEAP
 CREATE OR REPLACE
-FUNCTION es_get_toastwidth(p_schemaname text, p_relname text)
+FUNCTION es_get_toastwidth(p_relation regclass)
 RETURNS BIGINT
 LANGUAGE PLPGSQL STABLE
 AS $$
 DECLARE
   v_datawidth bigint := 0;
-  v_toastschemaname text;
-  v_toastrelname text;
+  v_toastrelation regclass;
 BEGIN
 
-SELECT nt.nspname, ct.relname
-  FROM pg_class ct
-  JOIN pg_class cr ON (ct.oid = cr.reltoastrelid)
-  JOIN pg_namespace nt ON (nt.oid = ct.relnamespace)
-  JOIN pg_namespace nr ON (nr.oid = cr.relnamespace)
- WHERE cr.relname = p_relname AND nr.nspname = p_schemaname
-INTO v_toastschemaname, v_toastrelname;
+SELECT CASE WHEN reltoastrelid != 0 THEN reltoastrelid::regclass
+       ELSE NULL END
+  FROM pg_class
+ WHERE oid = p_relation
+INTO STRICT v_toastrelation;
 
-IF FOUND THEN
+IF v_toastrelation IS NOT NULL THEN
   EXECUTE 'SELECT avg(c)::bigint '
     || ' * es_get_datawidth('
-    || quote_literal(v_toastschemaname) || ', ' || quote_literal(v_toastrelname)
+    || quote_literal(v_toastrelation)
     || ') FROM (select count(chunk_id) as c from '
-      || quote_ident(v_toastschemaname) || '.' || quote_ident(v_toastrelname)
+      || v_toastrelation
       || ' GROUP BY chunk_id) s'
   INTO v_datawidth;
 END IF;
@@ -110,7 +117,7 @@ $$;
 --
 -- Function to get the avg data width of a column, removing NULLs from the data width
 CREATE OR REPLACE
-FUNCTION es_get_coldatawidth(p_schemaname text, p_relname text, p_attnum int)
+FUNCTION es_get_coldatawidth(p_relation regclass, p_attnum smallint)
 RETURNS BIGINT
 LANGUAGE PLPGSQL STABLE
 AS $$
@@ -118,7 +125,7 @@ DECLARE
   v_datawidth bigint;
 BEGIN
 EXECUTE 'select avg(pg_column_size((' || p_attnum || ')))::bigint from '
-	|| quote_ident(p_schemaname)||'.'||quote_ident(p_relname)
+	|| p_relation
 INTO v_datawidth;
 RETURN v_datawidth;
 END;
@@ -127,19 +134,19 @@ $$;
 --
 -- Function to get the avg width of an index tuple
 CREATE OR REPLACE
-FUNCTION es_get_indexwidth(p_schemaname text, p_relname text, p_irelname text)
+FUNCTION es_get_indexwidth(p_irelation regclass)
 RETURNS BIGINT
 LANGUAGE SQL STABLE
 AS $$
 -- Sum datawidth of each column of the index
 WITH atts AS (
-  SELECT unnest(indkey) as indkey
+  SELECT unnest(indkey) as indkey, indrelid::regclass as v_relation
   FROM pg_index
  WHERE indisvalid AND indexprs IS NULL AND indpred IS NULL
-   AND indexrelid = p_irelname::regclass
+   AND indexrelid = p_irelation
 ),
 summarize AS (
-  SELECT sum(es_get_coldatawidth(p_schemaname, p_relname, indkey)) as s
+  SELECT sum(es_get_coldatawidth(v_relation, indkey)) as s
   FROM atts
 )
 SELECT (s + ItemPointerData)::bigint
@@ -153,7 +160,7 @@ $$;
 --
 -- HEAP
 CREATE OR REPLACE
-FUNCTION pg_estimate_heap_size(p_schemaname text, p_relname text, p_tuples bigint)
+FUNCTION pg_estimate_heap_size(p_relation regclass, p_tuples bigint)
 RETURNS BIGINT
 LANGUAGE SQL STABLE
 AS $$
@@ -161,9 +168,9 @@ SELECT (
   ceil(
     p_tuples
     / floor(
-      (es_get_fillfactor(p_schemaname, p_relname)/100::real) * (BlockSize - PageHeaderData)
+      es_get_fillfactor(p_relation)/100::real * (BlockSize - PageHeaderData)
       / (ItemIdData
-         + es_get_size_aligned(es_get_datawidth(p_schemaname, p_relname), MAXALIGN))
+         + es_get_size_aligned(es_get_datawidth(p_relation), MAXALIGN))
       )
   ) * BlockSize
 )::bigint
@@ -174,7 +181,7 @@ $$;
 -- TOAST
 -- How many tuples in TOAST for 1 tuple in HEAP ?
 CREATE OR REPLACE
-FUNCTION pg_estimate_toast_size(p_schemaname text, p_relname text, p_tuples bigint)
+FUNCTION pg_estimate_toast_size(p_relation regclass, p_tuples bigint)
 RETURNS BIGINT
 LANGUAGE SQL STABLE
 AS $$
@@ -182,9 +189,9 @@ SELECT (
   ceil(
     p_tuples
     / floor(
-      1.0 * (BlockSize - PageHeaderData)
+      1.0 * (BlockSize - PageHeaderData) -- TODO take the fillfactor of the toast table
       / (ItemIdData
-         + es_get_size_aligned(es_get_toastwidth(p_schemaname, p_relname), MAXALIGN))
+         + es_get_size_aligned(es_get_toastwidth(p_relation), MAXALIGN))
       )
   ) * BlockSize
 )::bigint
@@ -194,7 +201,7 @@ $$;
 --
 -- INDEX
 CREATE OR REPLACE
-FUNCTION pg_estimate_index_size(p_schemaname text, p_relname text, p_irelname text, p_tuples bigint)
+FUNCTION pg_estimate_index_size(p_irelation regclass, p_tuples bigint)
 RETURNS BIGINT
 LANGUAGE SQL STABLE
 AS $$
@@ -202,9 +209,9 @@ SELECT (
   ceil(
     p_tuples
     / floor(
-      (es_get_fillfactor(p_schemaname, p_irelname)/100::real) * (BlockSize - PageHeaderData)
+      (es_get_fillfactor(p_irelation)/100::real) * (BlockSize - PageHeaderData)
       / (ItemIdData
-         + es_get_size_aligned(es_get_indexwidth(p_schemaname, p_relname, p_irelname), MAXALIGN))
+         + es_get_size_aligned(es_get_indexwidth(p_irelation), MAXALIGN))
       )
   ) * BlockSize
 )::bigint
@@ -214,16 +221,13 @@ $$;
 --
 -- INDEXES (sum of all indexes)
 CREATE OR REPLACE
-FUNCTION pg_estimate_indexes_size(p_schemaname text, p_relname text, p_tuples bigint)
+FUNCTION pg_estimate_indexes_size(p_relation regclass, p_tuples bigint)
 RETURNS BIGINT
 LANGUAGE SQL STABLE
 AS $$
-SELECT SUM(COALESCE(pg_estimate_index_size(p_schemaname, p_relname, ci.relname, p_tuples), 0))::bigint
-  FROM pg_index i
-  JOIN pg_class cr ON (cr.oid = i.indrelid)
-  JOIN pg_class ci ON (ci.oid = i.indexrelid)
-  JOIN pg_namespace nr ON (nr.oid = cr.relnamespace)
- WHERE nr.nspname = p_schemaname AND cr.relname = p_relname
+SELECT SUM(COALESCE(pg_estimate_index_size(indexrelid::regclass, p_tuples), 0))::bigint
+  FROM pg_index
+ WHERE indrelid = p_relation
    AND indisvalid AND indexprs IS NULL AND indpred IS NULL;
 $$;
 
@@ -231,22 +235,22 @@ $$;
 -- TOTAL RELATION SIZE
 -- 
 CREATE OR REPLACE
-FUNCTION pg_estimate_total_relation_size(p_schemaname text, p_relname text, p_tuples bigint)
+FUNCTION pg_estimate_total_relation_size(p_relation regclass, p_tuples bigint)
 RETURNS BIGINT
 LANGUAGE SQL STABLE
 AS $$
 SELECT
   -- HEAP (MAIN)
-  COALESCE(pg_estimate_heap_size(p_schemaname, p_relname, p_tuples), 0)
+  COALESCE(pg_estimate_heap_size(p_relation, p_tuples), 0)
   +
   -- HEAP (VM)
   0
   +
   -- TOAST
-  COALESCE(pg_estimate_toast_size(p_schemaname, p_relname, p_tuples), 0)
+  COALESCE(pg_estimate_toast_size(p_relation, p_tuples), 0)
   +
   -- INDEX
-  COALESCE(pg_estimate_indexes_size(p_schemaname, p_relname, p_tuples), 0)
+  COALESCE(pg_estimate_indexes_size(p_relation, p_tuples), 0)
   +
   -- FSM: depends on FILLFACTOR too
   0

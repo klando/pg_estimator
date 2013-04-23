@@ -7,12 +7,12 @@ SELECT * from es_constants();
 CREATE SCHEMA test;
 CREATE TABLE test.foo(id1 int PRIMARY KEY);
 INSERT INTO test.foo select n from generate_series(1,100) as g(n);
-SELECT es_get_datawidth('test', 'foo');
-SELECT es_get_toastwidth('test', 'foo');
+SELECT es_get_datawidth('test.foo');
+SELECT es_get_toastwidth('test.foo');
 SELECT pg_size_pretty( pg_total_relation_size('test.foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('test', 'foo', 100));
-SELECT pg_size_pretty( pg_total_relation_size('test.foo') - pg_estimate_total_relation_size('test', 'foo', 100));
-SELECT ((pg_estimate_total_relation_size('test', 'foo', 100) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('test.foo', 100));
+SELECT pg_size_pretty( pg_total_relation_size('test.foo') - pg_estimate_total_relation_size('test.foo', 100));
+SELECT ((pg_estimate_total_relation_size('test.foo', 100) * 100)
        / pg_total_relation_size('test.foo') - 100) || ' %';
 DROP TABLE test.foo;
 DROP SCHEMA test;
@@ -22,12 +22,12 @@ CREATE SCHEMA test;
 SET search_path TO test,public;
 CREATE TABLE test.foo(id1 int PRIMARY KEY);
 INSERT INTO test.foo select n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('test', 'foo');
-SELECT es_get_toastwidth('test', 'foo');
+SELECT es_get_datawidth('test.foo');
+SELECT es_get_toastwidth('test.foo');
 SELECT pg_size_pretty( pg_total_relation_size('test.foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('test', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('test.foo') - pg_estimate_total_relation_size('test', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('test', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('test.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('test.foo') - pg_estimate_total_relation_size('test.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('test.foo', 1000000) * 100)
        / pg_total_relation_size('test.foo') - 100) || ' %';
 DROP TABLE test.foo;
 DROP SCHEMA test;
@@ -37,15 +37,28 @@ CREATE SCHEMA test;
 SET search_path TO public,test;
 CREATE TABLE test.foo(id1 int PRIMARY KEY);
 INSERT INTO test.foo select n from generate_series(1,1000000) as g(n);
-SELECT public.es_get_datawidth('test', 'foo');
-SELECT public.es_get_toastwidth('test', 'foo');
+SELECT public.es_get_datawidth('test.foo');
+SELECT public.es_get_toastwidth('test.foo');
 SELECT pg_size_pretty( pg_total_relation_size('test.foo'));
-SELECT pg_size_pretty( public.pg_estimate_total_relation_size('test', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('test.foo') - public.pg_estimate_total_relation_size('test', 'foo', 1000000));
-SELECT ((public.pg_estimate_total_relation_size('test', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( public.pg_estimate_total_relation_size('test.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('test.foo') - public.pg_estimate_total_relation_size('test.foo', 1000000));
+SELECT ((public.pg_estimate_total_relation_size('test.foo', 1000000) * 100)
        / pg_total_relation_size('test.foo') - 100) || ' %';
 DROP TABLE test.foo;
+SET search_path TO default;
 DROP SCHEMA test;
+
+-- Name with space
+CREATE TABLE "fo o"(id1 int PRIMARY KEY);
+INSERT INTO "fo o" select n from generate_series(1,1000000) as g(n);
+SELECT es_get_datawidth('"fo o"');
+SELECT es_get_toastwidth('"fo o"');
+SELECT pg_size_pretty( pg_total_relation_size('"fo o"'));
+SELECT pg_size_pretty( pg_estimate_total_relation_size('"fo o"', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('"fo o"') - public.pg_estimate_total_relation_size('"fo o"', 1000000));
+SELECT ((public.pg_estimate_total_relation_size('"fo o"', 1000000) * 100)
+       / pg_total_relation_size('"fo o"') - 100) || ' %';
+DROP TABLE "fo o";
 
 -- LARGE NUMBER OF COLS
 CREATE TABLE foo(i0 int, i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int,
@@ -61,148 +74,148 @@ CREATE TABLE foo(i0 int, i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int,
 INSERT INTO foo select n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,
 n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n,n 
 from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 -- INT + NULLs
 CREATE TABLE foo(id1 int);
 INSERT INTO foo select n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(id1 int,id2 int);
 INSERT INTO foo select n,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
 INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
 INSERT INTO foo select null,n,n,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
 INSERT INTO foo select n,null,n,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
 INSERT INTO foo select n,n,null,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
 INSERT INTO foo select n,n,n,null from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(id1 int,id2 int, id3 int, id4 int);
 INSERT INTO foo select null,n,null,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 -- TEXT + INT + NULLs
 CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
 INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
 INSERT INTO foo select n,n,null,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 -- COMPRESSED DATA
 CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
 INSERT INTO foo select repeat('1234567890',(2^9)::integer),n,n,n from generate_series(1,1000000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
 -- TOAST DATA
 CREATE TABLE foo(t1 text, i1 int, t2 text, i2 int);
 INSERT INTO foo select repeat('1234567890',(2^16)::integer),n,n,n from generate_series(1,10000) as g(n);
-SELECT es_get_datawidth('public', 'foo');
-SELECT es_get_toastwidth('public', 'foo');
+SELECT es_get_datawidth('public.foo');
+SELECT es_get_toastwidth('public.foo');
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 10000));
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 10000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 10000) * 100)
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 10000));
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 10000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 10000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
@@ -212,17 +225,17 @@ INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
 REINDEX TABLE foo;
 
 SELECT pg_size_pretty( pg_indexes_size('foo'));
-SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_indexes_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_table_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
-        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000)
+        	       + pg_estimate_toast_size('public.foo', 1000000) );
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
 
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
@@ -231,17 +244,17 @@ INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
 REINDEX TABLE foo;
 
 SELECT pg_size_pretty( pg_indexes_size('foo'));
-SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_indexes_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_table_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
-        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000)
+        	       + pg_estimate_toast_size('public.foo', 1000000) );
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
 
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
@@ -250,17 +263,17 @@ INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
 REINDEX TABLE foo;
 
 SELECT pg_size_pretty( pg_indexes_size('foo'));
-SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_indexes_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_table_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
-        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000)
+        	       + pg_estimate_toast_size('public.foo', 1000000) );
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
 
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
@@ -270,17 +283,17 @@ INSERT INTO foo select n,n,n,n from generate_series(1,1000000) as g(n);
 REINDEX TABLE foo;
 
 SELECT pg_size_pretty( pg_indexes_size('foo'));
-SELECT pg_size_pretty( pg_estimate_indexes_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_indexes_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000));
 SELECT pg_size_pretty( pg_table_size('foo'));
-SELECT pg_size_pretty( pg_estimate_heap_size('public', 'foo', 1000000)
-        	       + pg_estimate_toast_size('public', 'foo', 1000000) );
+SELECT pg_size_pretty( pg_estimate_heap_size('public.foo', 1000000)
+        	       + pg_estimate_toast_size('public.foo', 1000000) );
 SELECT pg_size_pretty( pg_total_relation_size('foo'));
-SELECT pg_size_pretty( pg_estimate_total_relation_size('public', 'foo', 1000000));
+SELECT pg_size_pretty( pg_estimate_total_relation_size('public.foo', 1000000));
 
-SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public', 'foo', 1000000));
-SELECT ((pg_estimate_total_relation_size('public', 'foo', 1000000) * 100)
+SELECT pg_size_pretty( pg_total_relation_size('foo') - pg_estimate_total_relation_size('public.foo', 1000000));
+SELECT ((pg_estimate_total_relation_size('public.foo', 1000000) * 100)
        / pg_total_relation_size('foo') - 100) || ' %';
 DROP TABLE foo;
 
