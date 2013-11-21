@@ -79,6 +79,7 @@ BEGIN
 EXECUTE 'select avg(pg_column_size(' || quote_ident(es_get_relname(p_relation)) || '))::bigint from '
 	|| p_relation
 INTO STRICT v_datawidth;
+RAISE DEBUG 'datawidth for relation % : % bytes', p_relation,v_datawidth;
 RETURN v_datawidth;
 END;
 $$;
@@ -110,6 +111,7 @@ IF v_toastrelation IS NOT NULL THEN
       || ' GROUP BY chunk_id) s'
   INTO v_datawidth;
 END IF;
+RAISE DEBUG 'avg toast datawidth for 1 tuple in heap: % bytes', coalesce(v_datawidth,0);
 RETURN coalesce(v_datawidth,0);
 END;
 $$;
@@ -127,6 +129,7 @@ BEGIN
 EXECUTE 'select avg(pg_column_size((' || p_attnum || ')))::bigint from '
 	|| p_relation
 INTO v_datawidth;
+RAISE DEBUG 'datawidth for relation %, column % : % bytes', p_relation, p_attnum, v_datawidth;
 RETURN v_datawidth;
 END;
 $$;
@@ -167,7 +170,7 @@ AS $$
 SELECT (
   ceil(
     p_tuples
-    / floor(
+    / (
       es_get_fillfactor(p_relation)/100::real * (BlockSize - PageHeaderData)
       / (ItemIdData
          + es_get_size_aligned(es_get_datawidth(p_relation), MAXALIGN))
@@ -188,7 +191,7 @@ AS $$
 SELECT (
   ceil(
     p_tuples
-    / floor(
+    /(
       1.0 * (BlockSize - PageHeaderData) -- TODO take the fillfactor of the toast table
       / (ItemIdData
          + es_get_size_aligned(es_get_toastwidth(p_relation), MAXALIGN))
@@ -208,7 +211,7 @@ AS $$
 SELECT (
   ceil(
     p_tuples
-    / floor(
+    / (
       (es_get_fillfactor(p_irelation)/100::real) * (BlockSize - PageHeaderData)
       / (ItemIdData
          + es_get_size_aligned(es_get_indexwidth(p_irelation), MAXALIGN))

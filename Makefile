@@ -1,5 +1,5 @@
 EXTENSION    = pg_estimator
-EXTVERSION   = 0.1.1
+EXTVERSION   = 0.1.2
 EXTCOMMENT   = Function to estimate relation size
 
 DOCS         = README.$(EXTENSION).txt
